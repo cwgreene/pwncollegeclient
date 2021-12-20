@@ -44,14 +44,14 @@ def challenges(s, category):
     challenges_dict[category] = (cards, nonce)
     return (cards, nonce)
 
-def activate_challenge(s, category, problem):
+def activate_challenge(s, category, problem, practice=False):
     chals, nonce = challenges(s, category)
     for chal in chals:
         if chal[0] == problem:
             name, chal_id = chal
             resp = s.post(f"https://{ENDPOINT}/pwncollege_api/v1/docker", json = {
                     "challenge_id": chal_id,
-                    "practice": False
+                    "practice": practice
                 },
                 headers={
                     "CSRF-Token": str(nonce, "UTF-8")
@@ -60,8 +60,8 @@ def activate_challenge(s, category, problem):
     else:
         print(f"Could not find challnege {options.challenge} for {options.category}")
 
-def download_challenge(s, category, challenge_id, target_dir):
-    activate_challenge(s, category, challenge_id)
+def download_challenge(s, category, challenge_id, target_dir, pratice):
+    activate_challenge(s, category, challenge_id, practice)
     p = subprocess.Popen(["scp", "hacker@dojo.pwn.college:/challenge/*", target_dir])
     p.wait()
 
@@ -75,6 +75,7 @@ def main():
     start_parser = subparser.add_parser("start")
     start_parser.add_argument("category")
     start_parser.add_argument("problem")
+    start_parser.add_argument("--practice", action="store_true", default=False)
     start_parser = subparser.add_parser("download")
     start_parser.add_argument("category")
     start_parser.add_argument("problem")
@@ -103,7 +104,7 @@ def main():
         for challenge in chals:
             print(challenge)
     elif options.command == "start":
-        activate_challenge(s, options.category, options.problem)
+        activate_challenge(s, options.category, options.problem, options.practice)
     elif options.command == "download":
         download_challenge(s, options.category, options.problem, options.target_dir)
     elif options.command == "download-all":
