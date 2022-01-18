@@ -47,7 +47,7 @@ def challenges(s, category):
 def activate_challenge(s, category, problem, practice=False):
     chals, nonce = challenges(s, category)
     for chal in chals:
-        if chal[0] == problem:
+        if problem in chal[0]:
             name, chal_id = chal
             resp = s.post(f"https://{ENDPOINT}/pwncollege_api/v1/docker", json = {
                     "challenge_id": chal_id,
@@ -58,7 +58,11 @@ def activate_challenge(s, category, problem, practice=False):
                 })
             break
     else:
-        print(f"Could not find challnege {options.challenge} for {options.category}")
+        print(f"Could not find challnege {problem} for {category}")
+        print("Problems found:")
+        for chal in chals:
+            print(" ", chal[0])
+        
 
 def download_challenge(s, category, challenge_id, target_dir, pratice):
     activate_challenge(s, category, challenge_id, practice)
