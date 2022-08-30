@@ -26,17 +26,25 @@ def login(s):
     })
     return resp
 
-def categories(s):
-    resp = s.get(f"https://{ENDPOINT}/challenges")
+def dojos(s, options):
+    resp = s.get(f"https://{ENDPOINT}/dojos")
     soup = bs4.BeautifulSoup(resp.content, "lxml")
     cards = soup.find_all("div", {"class": "card-body"})
     cards = [(card.h4.text.strip(), card.p.text.strip().split(" / "), card.parent.parent["href"]) for card in cards]
     return cards 
 
-def challenges(s, category):
+def categories(s, options):
+    resp = s.get(f"https://{ENDPOINT}/{options.dojo}/challenges")
+    soup = bs4.BeautifulSoup(resp.content, "lxml")
+    cards = soup.find_all("div", {"class": "card-body"})
+    cards = [(card.h4.text.strip(), card.p.text.strip().split(" / "), card.parent.parent["href"]) for card in cards]
+    return cards 
+
+def challenges(s, options):
+    category = options.category
     if category in challenges_dict:
         return challenges_dict[category]
-    resp = s.get(f"https://{ENDPOINT}/challenges/{category}")
+    resp = s.get(f"https://{ENDPOINT}/{options.dojo}/challenges/{options.category}")
     nonce= re.findall(b"'csrfNonce': \"(.*)\"", resp.content)[0]
     soup = bs4.BeautifulSoup(resp.content, "lxml")
     cards = soup.find_all("div", {"id": "challenges"})[0].find_all("div", {"class": "card"})
@@ -44,8 +52,8 @@ def challenges(s, category):
     challenges_dict[category] = (cards, nonce)
     return (cards, nonce)
 
-def activate_challenge(s, category, problem, practice=False):
-    chals, nonce = challenges(s, category)
+def activate_challenge(s, options, problem, practice=False):
+    chals, nonce = challenges(s, options)
     for chal in chals:
         if problem in chal[0]:
             name, chal_id = chal
@@ -58,14 +66,14 @@ def activate_challenge(s, category, problem, practice=False):
                 })
             break
     else:
-        print(f"Could not find challnege {problem} for {category}")
+        print(f"Could not find challenge {problem} for {dojo}/{category}")
         print("Problems found:")
         for chal in chals:
             print(" ", chal[0])
         
 
-def download_challenge(s, category, challenge_id, target_dir, pratice):
-    activate_challenge(s, category, challenge_id, practice)
+def download_challenge(s, category, challenge_id, target_dir):
+    activate_challenge(s, category, challenge_id)
     p = subprocess.Popen(["scp", "hacker@dojo.pwn.college:/challenge/*", target_dir])
     p.wait()
 
@@ -73,10 +81,14 @@ def main():
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers(dest="command")
     subparser.add_parser("login")
-    subparser.add_parser("categories")
+    subparser.add_parser("dojos")
+    categories_parser = subparser.add_parser("categories")
+    categories_parser.add_argument("--dojo", required=True)
     challenges_parser = subparser.add_parser("challenges")
+    challenges_parser.add_argument("--dojo", required=True)
     challenges_parser.add_argument("category")
     start_parser = subparser.add_parser("start")
+    start_parser.add_argument("--dojo", required=True)
     start_parser.add_argument("category")
     start_parser.add_argument("problem")
     start_parser.add_argument("--practice", action="store_true", default=False)
@@ -99,12 +111,16 @@ def main():
             supersecret.storeSecret(f"{ENDPOINT}", "session", s.cookies["session"])
         else:
             print("Failed to login!", result.status_code, result.reason)
+    elif options.command == "dojos":
+        for dojo in dojos(s, options):
+            name, (solved, total), href = dojo
+            print(f"{name} {solved} / {total} [{href}]")
     elif options.command == "categories":
-        for category in categories(s):
+        for category in categories(s, options):
             name, (solved, total), href = category
             print(f"{name} {solved} / {total} [{href}]")
     elif options.command == "challenges":
-        chals, nonce = challenges(s, options.category)
+        chals, nonce = challenges(s, options)
         for challenge in chals:
             print(challenge)
     elif options.command == "start":
