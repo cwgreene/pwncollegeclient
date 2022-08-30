@@ -72,8 +72,8 @@ def activate_challenge(s, options, problem, practice=False):
             print(" ", chal[0])
         
 
-def download_challenge(s, category, challenge_id, target_dir):
-    activate_challenge(s, category, challenge_id)
+def download_challenge(s, options, challenge_id, target_dir):
+    activate_challenge(s, options, options.problem, challenge_id)
     p = subprocess.Popen(["scp", "hacker@dojo.pwn.college:/challenge/*", target_dir])
     p.wait()
 
@@ -82,23 +82,30 @@ def main():
     subparser = parser.add_subparsers(dest="command")
     subparser.add_parser("login")
     subparser.add_parser("dojos")
+
     categories_parser = subparser.add_parser("categories")
     categories_parser.add_argument("--dojo", required=True)
+
     challenges_parser = subparser.add_parser("challenges")
     challenges_parser.add_argument("--dojo", required=True)
     challenges_parser.add_argument("category")
+
     start_parser = subparser.add_parser("start")
     start_parser.add_argument("--dojo", required=True)
     start_parser.add_argument("category")
     start_parser.add_argument("problem")
     start_parser.add_argument("--practice", action="store_true", default=False)
-    start_parser = subparser.add_parser("download")
-    start_parser.add_argument("category")
-    start_parser.add_argument("problem")
-    start_parser.add_argument("target_dir")
-    start_parser = subparser.add_parser("download-all")
-    start_parser.add_argument("category")
-    start_parser.add_argument("target_dir")
+
+    download_parser = subparser.add_parser("download")
+    download_parser.add_argument("--dojo", required=True)
+    download_parser.add_argument("category")
+    download_parser.add_argument("problem")
+    download_parser.add_argument("target_dir")
+
+    download_all_parser = subparser.add_parser("download-all")
+    download_all_parser.add_argument("--dojo", required=True)
+    download_all_parser.add_argument("category")
+    download_all_parser.add_argument("target_dir")
     options = parser.parse_args()
 
     if supersecret.hasSecret(f"{ENDPOINT}", "session"):
@@ -124,13 +131,13 @@ def main():
         for challenge in chals:
             print(challenge)
     elif options.command == "start":
-        activate_challenge(s, options.category, options.problem, options.practice)
+        activate_challenge(s, options, options.problem, options.practice)
     elif options.command == "download":
-        download_challenge(s, options.category, options.problem, options.target_dir)
+        download_challenge(s, options, options.problem, options.target_dir)
     elif options.command == "download-all":
-        chals, nonce = challenges(s, options.category)
+        chals, nonce = challenges(s, options)
         for (problem, id) in chals:
-            download_challenge(s, options.category, problem, options.target_dir)
+            download_challenge(s, options, problem, options.target_dir)
     else:
         print(options)
         print("No command specified!")
