@@ -30,7 +30,7 @@ def dojos(s, options):
     resp = s.get(f"https://{ENDPOINT}/dojos")
     soup = bs4.BeautifulSoup(resp.content, "lxml")
     cards = soup.find_all("div", {"class": "card-body"})
-    cards = [(card.h4.text.strip(), card.p.text.strip().split(" / "), card.parent.parent["href"]) for card in cards]
+    cards = [(card.h4.text.strip(), card.find_all('p')[1].text.strip().split(" / "), card.parent.parent["href"]) for card in cards]
     return cards 
 
 def categories(s, options):
