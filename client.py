@@ -59,7 +59,8 @@ def activate_challenge(s, options, problem, practice=False):
             name, chal_id = chal
             resp = s.post(f"https://{ENDPOINT}/pwncollege_api/v1/docker", json = {
                     "challenge_id": chal_id,
-                    "practice": practice
+                    "practice": practice,
+                    "dojo_id": options.dojo
                 },
                 headers={
                     "CSRF-Token": str(nonce, "UTF-8")
